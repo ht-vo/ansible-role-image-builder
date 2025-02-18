@@ -1,0 +1,39 @@
+---
+- name: Create {{ blueprint_name }} blueprint
+  ansible.builtin.template:
+    src: rhel-base.toml.j2
+    dest: '{{ image_builder_workdir }}/rhel-base.toml'
+
+- name: Check if the {{ blueprint_name }} blueprint exists
+  ansible.builtin.shell: composer-cli blueprints list
+  register: blueprints_list
+
+- name: Delete the existing {{ blueprint_name }} blueprint
+  ansible.builtin.shell: composer-cli blueprints delete {{ blueprint_name }}
+  when:
+    - blueprint_name in blueprints_list.stdout
+
+- name: Upload {{ blueprint_name }} blueprint
+  ansible.builtin.shell: composer-cli blueprints push {{ image_builder_workdir }}/rhel-base.toml
+
+- name: Start the {{ blueprint_name }} blueprint build
+  ansible.builtin.shell: composer-cli compose start {{ blueprint_name }} {{ image_builder_type }} --json | jq -r ".[].body.build_id"
+  register: build_id
+
+- name: Wait for the build {{ build_id.stdout }} until success
+  ansible.builtin.shell: composer-cli compose info {{ build_id.stdout }} --json | jq -r ".[].body.queue_status"
+  register: build_status
+  until: 
+    - build_status.stdout == "FINISHED"
+    - build_status.stdout != "FAILED"
+  retries: 60
+  delay: 30
+
+- name: Build details
+  ansible.builtin.debug:
+    msg:
+      - "Blueprint name: {{ blueprint_name }}"
+      - "Blueprint version: {{ blueprint_version }}"
+      - "Blueprint distribution: {{ blueprint_distro }}"
+      - "Build ID: {{ build_id.stdout }}"
+      - "Download the created image: composer-cli compose image {{ build_id.stdout }} --filename {{ blueprint_name }}.iso"

@@ -1,0 +1,11 @@
+---
+- name: Set up Image Builder on RHEL
+  ansible.builtin.import_tasks: 
+    file: setup-rhel.yml
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution == 'RedHat'
+
+- name: Build RHEL image
+  ansible.builtin.import_tasks:
+    file: build-rhel-base.yml
