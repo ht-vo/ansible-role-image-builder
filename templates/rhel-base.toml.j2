@@ -1,0 +1,39 @@
+name = "{{ blueprint_name }}"
+description = "{{ blueprint_description }}"
+version = "{{ blueprint_version }}"
+distro = "{{ blueprint_distro }}"
+
+[customizations]
+hostname = "{{ blueprint_hostname }}"
+
+[customizations.locale]
+{% if blueprint_languages | length > 1 %}
+languages = ["{{ blueprint_languages | join('\", \"') }}"]
+{% else %}
+languages = {{ blueprint_languages }}
+{% endif %}
+keyboard = "{{ blueprint_keyboard }}"
+
+[customizations.timezone]
+timezone = "{{ blueprint_ntp_timezone }}"
+ntpservers = ["{{ blueprint_ntp_servers | join('\", \"') }}"]
+
+{% for user in blueprint_users %}
+[[customizations.user]]
+name = "{{ user.name }}"
+password = "{{ user.password }}"
+key = "{{ user.ssh_key }}"
+home = "{{ user.home }}"
+shell = "{{ user.shell }}"
+groups = {{ user.groups }}
+{% endfor %}
+
+{% for group in blueprint_groups %}
+[[customizations.group]]
+name = "{{ group }}"
+{% endfor %}
+
+{% for package in blueprint_packages %}
+[[packages]]
+name = "{{ package }}"
+{% endfor %}
